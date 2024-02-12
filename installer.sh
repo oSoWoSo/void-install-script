@@ -210,7 +210,7 @@ installOptions() {
 
         audioChoice=$(drawDialog --title "Audio Server" --menu "If you are unsure, 'pipewire' is recommended.\n\nChoose 'Skip' if you want to skip." 0 0 0 "pipewire" "" "pulseaudio" "")
 
-        desktopChoice=$(drawDialog --title "Desktop Environment" --menu "Choose 'Skip' if you want to skip." 0 0 0 "gnome" "" "kde" "" "xfce" "" "sway" "" "i3" "")
+        desktopChoice=$(drawDialog --title "Desktop Environment" --menu "Choose 'Skip' if you want to skip." 0 0 0 "gnome" "" "kde" "" "xfce" "" "sway" "" "wayfire" "" "i3" "")
 
         if [ "$desktopChoice" == "i3" ]; then
             if drawDialog --title "" --yesno "Would you like to install lightdm with i3wm?" 0 0 ; then
@@ -691,6 +691,12 @@ install() {
                 echo -e "Installing Sway window manager... \n"
                 xbps-install -Sy -R $installRepo -r /mnt sway elogind foot xorg-fonts || failureCheck
                 echo -e "Sway has been installed. \n"
+                ;;
+
+            wayfire)
+                echo -e "Installing Wayfire window manager... \n"
+                xbps-install -Sy -R $installRepo -r /mnt wayfire elogind foot xorg-fonts || failureCheck
+                echo -e "Wayfire has been installed. \n"
                 ;;
 
             i3)
