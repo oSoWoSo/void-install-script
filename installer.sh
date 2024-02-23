@@ -392,6 +392,10 @@ install() {
         mkfs.ext4 /dev/void/root || failureCheck
     elif [ "$fsChoice" == "xfs" ]; then
         mkfs.xfs /dev/void/root || failureCheck
+    elif [ $fsChoice == "btrfs" ]; then 
+        mkfs.btrfs /dev/void/root || failureCheck
+        mkfs.btrfs -L void-root /dev/void/root
+        btrfs subvolume create /
     fi
 
     if [ "$separateHomePossible" == "1" ]; then
@@ -406,6 +410,8 @@ install() {
                 mkfs.ext4 /dev/void/home || failureCheck
             elif [ "$fsChoice" == "xfs" ]; then
                 mkfs.xfs /dev/void/home || failureCheck
+            elif [$fsChoice == "btrfs" ]; then 
+                btrfs subvolume create /home
             fi
 
         fi
@@ -524,6 +530,11 @@ install() {
     elif [ "$bootloaderChoice" == "efistub" ]; then
         echo "UUID=$partVar     /boot       vfat    defaults    0   0" >> /mnt/etc/fstab || failureCheck
     fi
+
+    if [$fsChoice == "btrfs"]; then
+        # TODO: allow for mount configuration options to be configured by user
+        echo "/dev/void/root  /     $fsChoice     compress=zstd:6              0       0" >> /mnt/etc/fstab || failureCheck
+    fi 
     echo "/dev/void/root  /     $fsChoice     defaults              0       0" >> /mnt/etc/fstab || failureCheck
 
     if [ "$swapPrompt" == "Yes" ]; then
