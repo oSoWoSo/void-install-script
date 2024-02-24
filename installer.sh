@@ -155,7 +155,7 @@ installOptions() {
     baseChoice=$(drawDialog --no-cancel --title "Base system meta package choice" --menu "If you are unsure, choose 'base-system'" 0 0 0 "base-system" "- Traditional base system package" "base-container" "- Minimal base system package targeted at containers and chroots")
 
     # More filesystems such as btrfs can be added later.
-    fsChoice=$(drawDialog --no-cancel --title "Filesystem choice" --menu "If you are unsure, choose 'ext4'" 0 0 0 "ext4" "" "xfs" "")
+    fsChoice=$(drawDialog --no-cancel --title "Filesystem choice" --menu "If you are unsure, choose 'ext4'" 0 0 0 "btrfs" "" "ext4" "" "xfs" "")
 
     suChoice=$(drawDialog --no-cancel --title "SU choice" --menu "If you are unsure, choose 'sudo'" 0 0 0 "sudo" "" "doas" "")
 
@@ -394,8 +394,8 @@ install() {
         mkfs.xfs /dev/void/root || failureCheck
     elif [ $fsChoice == "btrfs" ]; then 
         mkfs.btrfs /dev/void/root || failureCheck
-        mkfs.btrfs -L void-root /dev/void/root
-        btrfs subvolume create /
+        mkfs.btrfs -L void-root /dev/void/root || failureCheck
+        btrfs subvolume create / || failureCheck
     fi
 
     if [ "$separateHomePossible" == "1" ]; then
@@ -411,7 +411,7 @@ install() {
             elif [ "$fsChoice" == "xfs" ]; then
                 mkfs.xfs /dev/void/home || failureCheck
             elif [$fsChoice == "btrfs" ]; then 
-                btrfs subvolume create /home
+                btrfs subvolume create /home || failureCheck
             fi
 
         fi
@@ -449,6 +449,10 @@ install() {
 
             ext4)
                 xbps-install -Sy -R $installRepo -r /mnt e2fsprogs || failureCheck
+                ;;
+
+            btrfs)
+                xbps-install -Sy -R $installRepo -r /mnt btrfs-progs || failureCheck
                 ;;
 
             *)
