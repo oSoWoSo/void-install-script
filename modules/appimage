@@ -1,0 +1,12 @@
+title=appimage
+description="- Includes AM for managing AppImages"
+status=off
+
+main() {
+    commandFailure="AM installation has failed."
+    echo -e "Installing AM... \n"
+    xbps-install -Sy -R $installRepo -r /mnt flatpak || failureCheck
+    echo -e "AM has been installed. \n"
+    #chroot /mnt /bin/bash -c "flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo" || failureCheck
+    return 0
+}
