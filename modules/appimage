@@ -1,12 +1,18 @@
-title=appimage
-description="- Includes AM for managing AppImages"
+#!/bin/bash
+title=am
+description="- Installs AM for managing AppImages"
 status=off
 
 main() {
-    commandFailure="AM installation has failed."
-    echo -e "Installing AM... \n"
-    xbps-install -Sy -R $installRepo -r /mnt flatpak || failureCheck
-    echo -e "AM has been installed. \n"
-    #chroot /mnt /bin/bash -c "flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo" || failureCheck
+    commandFailure="AM dependencies installation has failed." &&
+        install curl wget zsync unzip tar
+
+    commandFailure="Download AM installer has failed." &&
+        system curl -s https://raw.githubusercontent.com/ivan-hc/AM/refs/heads/main/AM-INSTALLER -o /tmp/AM-INSTALLER
+
+    commandFailure="AM installation has failed." &&
+        system chmod a+x /tmp/AM-INSTALLER
+        system /tmp/AM-INSTALLER
+
     return 0
 }
