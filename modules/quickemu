@@ -1,13 +1,17 @@
+#!/bin/bash
 title=quickemu
 description="- Installs quickemu with needed dependencies."
 status=off
 qversion=4.9.2
 
 main() {
+    commandFailure="Installing quickemu dependencies has failed."  &&
+        install qemu bash coreutils grep jq procps-ng python3 util-linux sed spice-gtk swtpm usbutils wget xdg-user-dirs xrandr unzip zsync socat || failureCheck
+    commandFailure="Downloading quickemu has failed."  &&
+        wget https://github.com/quickemu-project/quickemu/archive/refs/tags/${qversion}.tar.gz /tmp/
     commandFailure="Installing quickemu has failed."
-    echo -e "Installing quickemu... \n"
-    xbps-install -Sy -R $installRepo -r /mnt qemu bash coreutils grep jq procps-ng python3 util-linux sed spice-gtk swtpm usbutils wget xdg-user-dirs xrandr unzip zsync socat || failureCheck
-    wget https://github.com/quickemu-project/quickemu/archive/refs/tags/${qversion}.tar.gz /tmp/ 
-    echo -e "quickemu installed. \n"
+        cd /tmp/quickemu/ || die
+        cp quickemu quickget quicktest chunkcheck /opt/bin/ || die
 
     return 0
+}
