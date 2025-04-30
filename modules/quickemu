@@ -1,17 +1,21 @@
 #!/bin/bash
 title=quickemu
-description="- Installs quickemu with needed dependencies."
+description="- Installs quickemu with dependencies"
 status=off
 qversion=4.9.2
 
 main() {
-    commandFailure="Installing quickemu dependencies has failed."  &&
-        install qemu bash coreutils grep jq procps-ng python3 util-linux sed spice-gtk swtpm usbutils wget xdg-user-dirs xrandr unzip zsync socat || failureCheck
-    commandFailure="Downloading quickemu has failed."  &&
-        wget https://github.com/quickemu-project/quickemu/archive/refs/tags/${qversion}.tar.gz /tmp/
-    commandFailure="Installing quickemu has failed."
-        cd /tmp/quickemu/ || die
-        cp quickemu quickget quicktest chunkcheck /opt/bin/ || die
+    #TODO: dependencies not all for Void yet
+    commandFailure="Installing quickemu dependencies has failed." &&
+        install qemu qemu-img bash coreutils grep jq procps-ng python3 util-linux sed spice-gtk swtpm usbutils wget xdg-user-dirs xrandr unzip zsync socat
+
+    commandFailure="Downloading quickemu has failed." &&
+        system wget https://github.com/quickemu-project/quickemu/archive/refs/tags/${qversion}.tar.gz /tmp/
+
+    commandFailure="Installing quickemu has failed." &&
+        system cd /tmp/quickemu/
+        mkdir -p /opt/bin
+        system cp quickemu quickget quicktest chunkcheck /opt/bin/
 
     return 0
 }
