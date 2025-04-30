@@ -1,22 +1,17 @@
+#!/bin/bash
 title=usbguard
 description="- Installs and enables usbguard, allows current devices"
 status=off
 
 main() {
-    commandFailure="Installing usbguard has failed."
-    echo -e "Installing usbguard... \n"
-    xbps-install -Sy -R $installRepo -r /mnt usbguard || failureCheck
-    echo -e "usbguard installed. \n"
+    commandFailure="Installing usbguard has failed." &&
+        install usbguard
 
-    commandFailure="Configuring usbguard has failed."
-    echo -e "Configuring usbguard... \n"
-    chroot /mnt /bin/bash -c "usbguard generate-policy > /etc/usbguard/rules.conf" || failureCheck
-    echo -e "usbguard configured. \n"
+    commandFailure="Configuring usbguard has failed." &&
+        system "usbguard generate-policy > /etc/usbguard/rules.conf"
 
-    commandFailure="Enabling usbguard has failed."
-    echo -e "Enabling usbguard... \n"
-    chroot /mnt /bin/bash -c "ln -s /etc/sv/usbguard /var/service" || failureCheck
-    echo -e "usbguard enabled. \n"
+    commandFailure="Enabling usbguard has failed." &&
+        system "ln -s /etc/sv/usbguard /var/service"
 
     return 0
 }

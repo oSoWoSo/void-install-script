@@ -1,46 +1,40 @@
+#!/bin/bash
 title=nftables
 description="- Includes a default firewall config"
 status=on
 
 main() {
-    commandFailure="nftables installation has failed."
-    echo -e "Installing nftables... \n"
-    xbps-install -Sy -R $installRepo -r /mnt nftables || failureCheck
-    echo -e "nftables has been installed. \n"
-    
-    commandFailure="Setting up nftables config has failed."
-    echo -e "Setting up nftables config... \n"
+    commandFailure="nftables installation has failed." &&
+        install nftables
 
-    echo -e '#!/usr/sbin/nft -f \n' >> /mnt/etc/nftables.conf || failureCheck
-    echo -e 'flush ruleset \n' >> /mnt/etc/nftables.conf || failureCheck
+    commandFailure="Configuring nftables firewall has failed."
+
+    echo -e '#!/usr/sbin/nft -f \n' >> /mnt/etc/nftables.conf || die
+    echo -e 'flush ruleset \n' >> /mnt/etc/nftables.conf || die
 
     # Create table
-    chroot /mnt /bin/bash -c "nft add table inet filter" || failureCheck
+    system "nft add table inet filter"
 
     # Input chain
-    chroot /mnt /bin/bash -c "nft add chain inet filter input '{type filter hook input priority 0; policy drop;}' &&
+    system "nft add chain inet filter input '{type filter hook input priority 0; policy drop;}' &&
     nft add rule inet filter input ct state invalid drop &&
     nft add rule inet filter input ct state { established, related } accept &&
     nft add rule inet filter input iif "lo" accept &&
     nft add rule inet filter input iif != "lo" ip daddr 127.0.0.1/8 drop &&
-    nft add rule inet filter input iif != "lo" ip6 daddr ::1 drop" || failureCheck
+    nft add rule inet filter input iif != "lo" ip6 daddr ::1 drop"
 
     # Output chain
-    chroot /mnt /bin/bash -c "nft add chain inet filter output '{type filter hook output priority 0; policy accept;}'" || failureCheck
+    system "nft add chain inet filter output '{type filter hook output priority 0; policy accept;}'"
 
     # Forward chain 
-    chroot /mnt /bin/bash -c "nft add chain inet filter forward '{type filter hook forward priority 0; policy drop;}'" || failureCheck
+    system "nft add chain inet filter forward '{type filter hook forward priority 0; policy drop;}'"
 
-    # Output config
-    commandFailure="Outputting nftables config has failed."
-    echo -e "Outputting nftables config... \n"
-    chroot /mnt /bin/bash -c "nft list ruleset >> /etc/nftables.conf" || failureCheck
-    echo -e "Config has been output. \n"
+    # Save config
+    commandFailure="Saving nftables config has failed." &&
+        system "nft list ruleset >> /etc/nftables.conf"
 
-    commandFailure="Enabling nftables has failed."
-    echo -e "Enabling nftables... \n"
-    chroot /mnt /bin/bash -c "ln -s /etc/sv/nftables /var/service" || failureCheck
-    echo -e "nftables enabled. \n"
+    commandFailure="Enabling nftables has failed." &&
+        system "ln -s /etc/sv/nftables /var/service"
 
     return 0
 }

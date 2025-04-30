@@ -3,6 +3,12 @@ TUI Shell script installer for Void Linux
 
 This installer was primarily created to serve as an installer with encryption support while also having general installation options one would want, with sane defaults.
 
+The overall goal of this installer is to deploy a system that is ready to use as soon as the installer exits.
+
+At the moment, this installer does not have stable releases. The most recent commit should be considered the most recent stable release. Of course, if you run into bugs, please create an issue. (Or, if you're inclined, create a pull request to fix it.)
+
+![TUI Image](https://github.com/kkrruumm/void-install-script/blob/main/images/tuiscreenshot.png)
+
 # Features
 ```
 -Option to add user-created modules to be executed by the installer, see modules notes
@@ -12,51 +18,62 @@ This installer was primarily created to serve as an installer with encryption su
 --Option to install Flatpak with Flathub repository
 --Option to install and preconfigure qemu and libvirt
 --Option to install nftables with a default firewall config
+--Various security related modules
 
--Option to choose between efistub and grub
+-Option to choose between grub and UKI to boot the system
 
 -Option to encrypt installation disk
---With efistup setup, encryption will encrypt / using luks2
+--With UKI setup, encryption will encrypt both /boot and / using luks2
 --With grub setup, encryption will encrypt both /boot and / using luks1
 
--Option to pre-install and pre-configure the following;
---Graphics drivers (amd, nvidia, intel, nvidia-optimus, none)
+-Option to pre-install and pre-configure the following:
+--Graphics drivers (amd, nvidia, intel, nvidia-nouveau, none)
 --Networking (dhcpcd, NetworkManager, none)
 --Audio server (pipewire, pulseaudio, none)
---DE or WM (gnome, kde, xfce, sway, i3, none)
+
+--DE or WM (gnome, i3, kde, mate, niri, river, sway, swayfx, wayfire, xfce, none)
+---With i3, there is an option to install lightdm
+---With sway, swayfx, wayfire, and niri there is an option to install greetd
+
 --Or, choose to do none of these and install a bare-minimum system
 
--Option to choose between base-system and base-container base system meta packages
+-Option to choose between LVM and a traditional install
+-Option to choose between zswap, swap partition, and normal swapfile
 -Option to securely erase the installation disk with shred
--Option to choose either doas or sudo
+-Option to choose between doas or sudo
 -Option to choose your repository mirror
 -Option to choose between linux, linux-lts, and linux-mainline kernels
--Option to choose between xfs and ext4 filesystems
+-Option to choose between xfs, ext4, and btrfs filesystems
 -Configure partitions in the installer for home, swap, and root with LVM
 -Support for both glibc and musl
 -User creation and basic configuration
+-Custom post_install functionality
 ```
 
 # Instructions
-```
-Boot into a Void Linux live medium
-Login as anon
-sudo xbps-install -S git
-git clone https://github.com/kkrruumm/void-install-script/
-cd void-install-script
-chmod +x installer.sh
-sudo ./installer.sh
-Follow on-screen steps
-Done.
-```
 
-# efistub notes
+1. Boot into a Void Linux live medium
+2. Login as `anon` with password `voidlinux`
+3. Run the following commands:
+    - `sudo xbps-install -Su`
+    - `sudo xbps-install -S git`
+    - `git clone https://github.com/kkrruumm/void-install-script.git`
+    - `cd void-install-script`
+    - `sudo ./installer.sh`
+4. Follow on-screen steps
+5. Done.
 
-efistub setup will *not* provide full-disk-encryption as /boot will not be encrypted.
+# UKI notes
 
-However, root will be encrypted using luks2 instead of luks1, since grub is no longer a constraint here.
+UKI setup *will* provide full-disk-encryption as both / and /boot will be encrypted with luks2.
 
-efistub *can* be a bit touchy on some (non entirely UEFI standards compliant) motherboards, though this doesn't seem to be much of a problem as long as we "trick" boards into not deleting the boot entry.
+Do keep in mind potential security issues regarding weaker key derivation functions, such as pbkdf2 which is used with luks1, rather than argon2id with luks2.
+
+UKIs *can* both be a bit touchy on some (non entirely UEFI standards compliant) motherboards, though this doesn't seem to be much of a problem as long as we "trick" boards into not deleting the boot entry.
+
+The default UKI location is ``/boot/efi/EFI/boot/bootx64.efi``, and it is recommended to leave it in this location so as to not have to regenerate the boot entry with efibootmgr, but also to maintain compatibility with spotty UEFI implementations.
+
+With UKIs, kernel parameters are set in ``/etc/kernel.d/post-install/60-ukify``, to update these, modify this file and run a reconfigure on your kernel.
 
 # Modules notes
 
@@ -87,11 +104,97 @@ The status variable tells the installer whether or not the module should be enab
 
 Inside of the main() function, you're free to add any commands you'd like to be executed, and you can access all variables set by the primary install script.
 
+If the module script requires a certain value that may or may not be set by the user, you may check if this variable is set at the top of the module file, and return 1 if it is not. If a module returns 1, it will not be shown in the modules menu. The esync module is an example of this as it requires a username in order to function.
 
+If the module script changes kernel parameters, you may set `kernelparam_update="true"` in the module script, and the installer will update the grub config (or run a reconfigure on the kernel in the case of UKIs) once all of the modules have finished running. The `amdgpu_unlock` module is an example of this.
 
 That's it!
 
 Feel free to check out some of the installers included modules for further example.
+
+# Hidden installer options
+
+There are a few options that aren't exposed directly to the user because they can potentially be dangerous, but can be changed by creating a file that sets these variables and adding it as a flag when executing the installer.
+
+This feature is also how one may define a `post_install` function to run whatever commands they like as the final thing the installer does.
+
+Example: 
+```
+./installer.sh /path/to/file
+```
+
+Such file would contain any or all of the following options, and the following examples are set to their default values:
+
+```
+acpi="true"
+intel_pstate="true"
+hash="sha512"
+keysize="512"
+itertime="10000"
+basesystem="*" # Define base system packages instead of using metapackage
+
+post_install() {
+    # do post-install stuff here
+}
+```
+
+If none of these variables are set in the file, or no file is provided, the above defaults will be used.
+
+- The toggle for ACPI can be set to false if you are facing ACPI related issues. This will set the "acpi=off" kernel parameter on the new install. Do not change this setting unless absolutely necessary.
+
+- The toggle for intel_pstate can be set to false if you would like to disable intels power management. This is particularly useful on laptops to gain access to the "ondemand" governor and otherwise. This will set the "intel_pstate=disable" kernel parameter on the new install.
+
+- hash, keysize, and itertime are all variables that change the LUKS settings for encrypted installations.
+
+I do not recommend changing hash and keysize from their default values unless you are absolutely certain you would like to. Research this before changing values.
+
+itertime is a bit less strict. As a TL;DR, the higher this value is, the longer brute-forcing this drive should take. 
+
+The value here will equal the amount of time it takes to unlock the drive in milliseconds calculated for the system this is ran on. If this drive is then put into a system with a faster CPU, it will unlock quicker.
+
+The LUKS default is "2000", or 2 seconds. The default in this installer has been raised with systems that have slower CPUs (and users that are more security conscious) in mind.
+
+The fips140 compliant value here would be 600000 according to owasp, though this would result in a 10 minute disk unlock time.
+
+- The `post_install` function may be defined if the user would like to run custom commands once installation has completed.
+
+This function does not need to be defined, but if it is, this will be the last task the installer handles. This function has access to all of the variables defined by the installer, and has access to wrapper commands such as `system` and `install`.
+
+A cool thing that could be done with this file (and as part of this post_install function) is switching based on which device the installer is being run on, do see [my file](https://github.com/kkrruumm/void-basesystem) for an example of this.
+
+Outside of options that are potentially dangerous, "random" features that do not fit elsewhere can be added via this.
+
+# btrfs notes
+
+Do note that btrfs support in this installer is still considered experimental, meaning the deployed setup is likely to change over time.
+
+Currently, the btrfs option will deploy a "typical" btrfs setup, with the following subvolumes:
+
+- `@` - root
+- `@home` - created if the user chooses to split off home
+- `@snapshots` - mounted at `/.snapshots`
+- `@swap` - created to disable compression as it seems like the `+m` attribute is currently non functional, mounted at `/swap`
+- `@var` - copy-on-write disabled
+
+A few other subvolumes are created, because the contents of which typically are undesired as part of snapshots and/or their contents should persist through rollbacks:
+
+- `/root`
+- `/tmp`
+- `/srv`
+- `/usr/local`
+- `/boot/grub/x86_64-efi` - only if grub is the chosen bootloader
+
+To some extent, this script tries to mirror the OpenSUSE btrfs setup, which is detailed [here](https://en.opensuse.org/SDB:BTRFS).
+
+# Wrappers
+
+There are wrapper functions for a handful of things, such as ``install`` and ``system``.
+
+``system command`` will run "command" on the new install via chroot for enabling services or otherwise, rather than repetitively entering full chroot commands. This wrapper does not need to ``|| die``, as this is handled in the function that is called, however, ``commandFailure`` must be set before ``system command`` is run if the command should provide a specific output on command failure. 
+
+``install package`` will install "package" on the new install, and also does not need to ``|| die``, as this is handled in the ``install`` function, and also must have commandFailure set before the command is run if it should return a specific output on command failure.
+
+All of the current and future wrapper functions will be located in ``misc/libviss``.
 
 # Misc notes
 
@@ -99,19 +202,23 @@ This installer is not officially supported, and is still fairly work-in-progress
 
 This installer only supports x86_64-efi. I currently have no plans to support anything else.
 
-The base-system metapackage should be chosen in *most* scenarios, though using base-container provides a slightly more minimal install.
-
 If you have found this script useful, do star this repository!
 
 # Contributing
 
-The best way to contribute to this would be to find ways to break the installer.
+The best way to contribute to this would be to create a pull request adding the feature you would like.
 
-If you would like a change to be made to the script, a request/suggestion in the issues tracker is a wonderful place to start.
+If you would like a change to be made to the script, a request/suggestion in the issues tracker is also a wonderful place to start.
 
-Niche requests for features that do not fit the scope of this installer are unlikely to be entertained, but do not hesitate to suggest ideas.
+There *are* a few things to keep in mind- 
+
+- No tab characters. Using 4 spaces in place of tab characters is appropriate.
+- Try to follow the scripting and formatting style of the script in general, in order to keep things consistent.
+- Contribute with the mindset that although something may be merged, it also may be mercilessly edited/modified/removed later.
 
 # TODO
-```
--You tell me.
-```
+- Add manual partitioning
+- Split security modules into their own menu
+- ZFS support with zfsbootmenu is planned
+- Add more bootloader choices such as limine and systemd-boot 
+- You tell me, or, open a PR adding what you want.

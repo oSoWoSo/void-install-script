@@ -1,0 +1,20 @@
+#!/bin/bash
+title=net.ipv4.conf.all.rp_filter
+description="- Provides a choice to set the net.ipv4.conf.all.rp_filter value"
+status=off
+
+main() {
+    rpfilter=$(drawDialog --no-cancel --title "net.ipv4.conf.all.rp_filter" --menu "" 0 0 0 "Strict" "" "Loose" "" "None" "")
+
+    commandFailure="Setting net.ipv4.conf.all.rp_filter has failed."
+    if [ "$rpfilter" == "Loose" ]; then
+        echo "net.ipv4.conf.default.rp_filter = 2" >> /mnt/etc/sysctl.conf || die
+        echo "net.ipv4.conf.all.rp_filter = 2" >> /mnt/etc/sysctl.conf || die
+    elif [ "$rpfilter" == "Strict" ]; then
+        echo "net.ipv4.conf.default.rp_filter = 1" >> /mnt/etc/sysctl.conf || die
+        echo "net.ipv4.conf.all.rp_filter = 1" >> /mnt/etc/sysctl.conf || die
+    fi
+
+    return 0
+}
+

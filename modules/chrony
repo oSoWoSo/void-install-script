@@ -1,0 +1,14 @@
+#!/bin/bash
+title=chrony
+description="- Chrony NTP Daemon"
+status=on
+
+main() {
+    commandFailure="Chrony installation has failed." &&
+        install chrony
+
+    commandFailure="Enabling chronyd has failed." &&
+        system "ln -s /etc/sv/chronyd /var/service"
+
+    return 0
+}

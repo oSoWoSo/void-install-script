@@ -1,0 +1,20 @@
+#!/bin/bash
+title=module.sig_enforce
+description="- Enables module.sig_enforce kernel parameter"
+status=off
+
+main() {
+    commandFailure="Enabling module.sig_enforce has failed."
+    case "$bootloader" in
+        grub)
+            sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4 module.sig_enforce=1/g' /mnt/etc/default/grub || die
+        ;;
+        uki)
+            sed -i -e 's/loglevel=4/loglevel=4 module.sig_enforce=1/g' /mnt/etc/kernel.d/post-install/60-ukify || die
+        ;;
+    esac
+
+    kernelparam_update="true"
+
+    return 0 
+}

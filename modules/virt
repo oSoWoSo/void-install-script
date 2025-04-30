@@ -1,26 +1,42 @@
+#!/bin/bash
 title=virt
 description="- Installs and configures qemu and libvirt"
 status=off
 
 main() {
-    commandFailure="Installing qemu and libvirt has failed."
-    echo -e "Installing qemu and libvirt... \n"
-    xbps-install -Sy -R $installRepo -r /mnt qemu libvirt virtiofsd || failureCheck
-    echo -e "qemu and libvirt installed. \n"
+    # netcat is installed here along with everything else because
+    # machines using this box remotely via virt-manager require it,
+    # such as in the context of using void on a virtualization server
+    commandFailure="Installing qemu and libvirt has failed." &&
+        install qemu libvirt virtiofsd polkit dbus netcat
 
     commandFailure="Modifying qemu and libvirt configs has failed."
-    echo -e "Modifying qemu and libvirt configs... \n"
-    sed -i -e 's/#unix_sock_group = "libvirt"/unix_sock_group = "libvirt"/g' /mnt/etc/libvirt/libvirtd.conf || failureCheck
-    sed -i -e 's/#unix_sock_rw_perms = "0770"/unix_sock_rw_perms = "0770"/g' /mnt/etc/libvirt/libvirtd.conf || failureCheck
+    sed -i -e 's/#unix_sock_group = "libvirt"/unix_sock_group = "libvirt"/g' /mnt/etc/libvirt/libvirtd.conf || die
+    sed -i -e 's/#unix_sock_rw_perms = "0770"/unix_sock_rw_perms = "0770"/g' /mnt/etc/libvirt/libvirtd.conf || die
 
-    sed -i -e 's/#user = "libvirt"/user = "'$createUser'"/g' /mnt/etc/libvirt/qemu.conf || failureCheck
-    sed -i -e 's/#group = "libvirt"/group = "'$createUser'"/g' /mnt/etc/libvirt/qemu.conf || failureCheck
-    echo -e "Modified qemu and libvirt configs. \n"
+    if [ -n "$username" ]; then
+        sed -i -e 's/#user = "libvirt"/user = "'$username'"/g' /mnt/etc/libvirt/qemu.conf || die
+        sed -i -e 's/#group = "libvirt"/group = "'$username'"/g' /mnt/etc/libvirt/qemu.conf || die
 
-    commandFailure="Adding user to libvirt group has failed."
-    echo -e "Adding user to libvirt group... \n"
-    chroot /mnt /bin/bash -c "usermod -aG libvirt $createUser" || failureCheck
-    echo -e "Added user to libvirt group. \n"
+        commandFailure="Adding user to libvirt group has failed." &&
+            system "usermod -aG libvirt $username"
+    fi
+
+    commandFailure="Enabling virt services has failed."
+    system "ln -s /etc/sv/libvirtd /var/service"
+    system "ln -s /etc/sv/virtlogd /var/service"
+    system "ln -s /etc/sv/virtlockd /var/service"
+
+    # dbus and polkitd may or may not be installed by other things, recheck
+    # this will fail if /var/service/dbus is checked as opposed to the default runsvdir
+    [ ! -e /mnt/etc/runit/runsvdir/default/dbus ] &&
+        { commandFailure="Enabling dbus service has failed." ; system "ln -s /etc/sv/dbus /var/service" ; }
+
+    # allow proc access to polkitd for hardened proc module
+    # if not already done by the harden proc module
+    # regular chroot is being used here because the system wrapper will die on non-0 exit
+    grep "gid=proc /proc" /mnt/etc/rc.local && ! chroot /mnt /bin/bash -c "groups polkitd | grep proc" &&
+        { commandFailure="Adding polkitd user to proc group has failed." ; system "usermod -aG proc polkitd" ; }
 
     return 0
 }
