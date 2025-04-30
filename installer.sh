@@ -239,9 +239,6 @@ audioConfig() {
     audio=$(drawDialog --no-cancel --title "Audio Server" --extra-button --extra-label "Map" --menu "If you are unsure, 'pipewire' is recommended." 0 0 0 "pipewire" "" "pulseaudio" "" "none" "")
     [ "$?" == "3" ] && dungeonmap
 
-    desktopConfig
-}
-
 desktopConfig() {
     desktop=$(drawDialog --no-cancel --title "Desktop Environment" --extra-button --extra-label "Map" --menu "" 0 0 0 "gnome" "" "i3" "" "kde" "" "mate" "" "niri" "" "river" "" "sway" "" "swayfx" "" "wayfire" "" "xfce" "" "none" "")
     [ "$?" == "3" ] && dungeonmap
