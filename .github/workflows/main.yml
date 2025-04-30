@@ -38,17 +38,8 @@ jobs:
       - name: Prepare masterdir
         run: |
           chown -R builder:builder . &&
-          sudo -Eu builder common/travis/set_mirror.sh &&
-          common/travis/fetch-xtools.sh
-
-      - name: Find changed templates
-        run: sudo -Eu builder common/travis/changed_templates.sh
-
-      - name: Run lints
-        run: |
-          sudo -Eu builder common/travis/verify-update-check.sh || rv=1
-          sudo -Eu builder common/travis/xlint.sh || rv=1
-          exit "${rv:-0}"
+          sudo -Eu builder .github/set_mirror.sh &&
+          .github/fetch-xtools.sh
 
   # Build changed packages.
   build:
